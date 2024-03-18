@@ -1,16 +1,12 @@
 'use strict';
 /*!
- * Pacman - HTML5 Game
- * https://passer-by.com/pacman/
+ * Catch Up - HTML5 Game
  *
- * Copyright (c) 2016-present, HaoLe Zheng
+ * Copyright (c) 2016-present, RayFirst
  * Released under the MIT License.
  * https://github.com/mumuy/pacman/blob/master/LICENSE
 */
 
-/*
-* 小型游戏引擎
-*/
 
 // requestAnimationFrame polyfill
 if (!Date.now)
@@ -39,45 +35,45 @@ Date.now = function() { return new Date().getTime(); };
 function Game(id,params){
     var _ = this;
     var settings = {
-        width:960,						//画布宽度
-        height:640						//画布高度
+        width:960,						
+        height:640						
     };
     Object.assign(_,settings,params);
     var $canvas = document.getElementById(id);
     $canvas.width = _.width;
     $canvas.height = _.height;
-    var _context = $canvas.getContext('2d');	//画布上下文环境
-    var _stages = [];							//布景对象队列
-    var _events = {};							//事件集合
-    var _index=0,								//当前布景索引
-        _hander;  								//帧动画控制
-    //活动对象构造
+    var _context = $canvas.getContext('2d');	
+    var _stages = [];							
+    var _events = {};							
+    var _index=0,								
+        _hander;  								
+   
     var Item = function(params){
         this._params = params||{};
-        this._id = 0;               //标志符
-        this._stage = null;         //与所属布景绑定
+        this._id = 0;               
+        this._stage = null;         
         this._settings = {
-            x:0,					//位置坐标:横坐标
-            y:0,					//位置坐标:纵坐标
-            width:20,				//宽
-            height:20,				//高
-            type:0,					//对象类型,0表示普通对象(不与地图绑定),1表示玩家控制对象,2表示程序控制对象
-            color:'#F00',			//标识颜色
-            status:1,				//对象状态,0表示未激活/结束,1表示正常,2表示暂停,3表示临时,4表示异常
-            orientation:0,			//当前定位方向,0表示右,1表示下,2表示左,3表示上
-            speed:0,				//移动速度
-            //地图相关
-            location:null,			//定位地图,Map对象
-            coord:null,				//如果对象与地图绑定,需设置地图坐标;若不绑定,则设置位置坐标
-            path:[],				//NPC自动行走的路径
-            vector:null,			//目标坐标
-            //布局相关
-            frames:1,				//速度等级,内部计算器times多少帧变化一次
-            times:0,				//刷新画布计数(用于循环动画状态判断)
-            timeout:0,				//倒计时(用于过程动画状态判断)
-            control:{},				//控制缓存,到达定位点时处理
-            update:function(){}, 	//更新参数信息
-            draw:function(){}		//绘制
+            x:0,					
+            y:0,					
+            width:20,				
+            height:20,				
+            type:0,					
+            color:'#F00',			
+            status:1,				
+            orientation:0,			
+            speed:0,				
+           
+            location:null,			
+            coord:null,				
+            path:[],				
+            vector:null,			
+
+            frames:1,				
+            times:0,				
+            timeout:0,				
+            control:{},				
+            update:function(){}, 	
+            draw:function(){}		
         };
         Object.assign(this,this._settings,this._params);
     };
@@ -99,47 +95,47 @@ function Game(id,params){
         }
         _events[eventType]['s'+this._stage.index+'i'+this._id] = callback.bind(this);  //绑定作用域
     };
-    //地图对象构造器
+
     var Map = function(params){
         this._params = params||{};
-        this._id = 0;               //标志符
-        this._stage = null;         //与所属布景绑定
+        this._id = 0;               
+        this._stage = null;         
         this._settings = {
-            x:0,					//地图起点坐标
+            x:0,				
             y:0,
-            size:20,				//地图单元的宽度
-            data:[],				//地图数据
-            x_length:0,				//二维数组x轴长度
-            y_length:0,				//二维数组y轴长度
-            frames:1,				//速度等级,内部计算器times多少帧变化一次
-            times:0,				//刷新画布计数(用于循环动画状态判断)
-            cache:false,    		//是否静态（如静态则设置缓存）
-            update:function(){},	//更新地图数据
-            draw:function(){},		//绘制地图
+            size:20,			
+            data:[],				
+            x_length:0,			
+            y_length:0,				
+            frames:1,			
+            times:0,				
+            cache:false,    	
+            update:function(){},	
+            draw:function(){},		
         };
         Object.assign(this,this._settings,this._params);
     };
-    //获取地图上某点的值
+
     Map.prototype.get = function(x,y){
         if(this.data[y]&&typeof this.data[y][x]!='undefined'){
             return this.data[y][x];
         }
         return -1;
     };
-    //设置地图上某点的值
+
     Map.prototype.set = function(x,y,value){
         if(this.data[y]){
             this.data[y][x] = value;
         }
     };
-    //地图坐标转画布坐标
+
     Map.prototype.coord2position = function(cx,cy){
         return {
             x:this.x+cx*this.size+this.size/2,
             y:this.y+cy*this.size+this.size/2
         };
     };
-    //画布坐标转地图坐标
+
     Map.prototype.position2coord = function(x,y){
         var fx = Math.abs(x-this.x)%this.size-this.size/2;
         var fy = Math.abs(y-this.y)%this.size-this.size/2;
@@ -149,7 +145,7 @@ function Game(id,params){
             offset:Math.sqrt(fx*fx+fy*fy)
         };
     };
-    //寻址算法
+
     Map.prototype.finder = function(params){
         var defaults = {
             map:null,
@@ -158,21 +154,21 @@ function Game(id,params){
             type:'path'
         };
         var options = Object.assign({},defaults,params);
-        if(options.map[options.start.y][options.start.x]||options.map[options.end.y][options.end.x]){ //当起点或终点设置在墙上
+        if(options.map[options.start.y][options.start.x]||options.map[options.end.y][options.end.x]){ 
             return [];
         }
         var finded = false;
         var result = [];
         var y_length  = options.map.length;
         var x_length = options.map[0].length;
-        var steps = Array(y_length).fill(0).map(()=>Array(x_length).fill(0));     //步骤的映射
-        var _getValue = function(x,y){  //获取地图上的值
+        var steps = Array(y_length).fill(0).map(()=>Array(x_length).fill(0));    
+        var _getValue = function(x,y){  
             if(options.map[y]&&typeof options.map[y][x]!='undefined'){
                 return options.map[y][x];
             }
             return -1;
         };
-        var _next = function(to){ //判定是否可走,可走放入列表
+        var _next = function(to){ 
             var value = _getValue(to.x,to.y);
             if(value<1){
                 if(value==-1){
@@ -185,11 +181,11 @@ function Game(id,params){
                 }
             }
         };
-        var _render = function(list){//找线路
+        var _render = function(list){
             var new_list = [];
             var next = function(from,to){
                 var value = _getValue(to.x,to.y);
-                if(value<1){	//当前点是否可以走
+                if(value<1){	
                     if(value==-1){
                         to.x = (to.x+x_length)%x_length;
                         to.y = (to.y+y_length)%y_length;
@@ -231,11 +227,11 @@ function Game(id,params){
         }
         return result;
     };
-    //布景对象构造器
+
     var Stage = function(params){
         this._params = params||{};
         this._settings = {
-            index:0,                        //布景索引
+            index:0,                    
             status:0,						//布景状态,0表示未激活/结束,1表示正常,2表示暂停,3表示临时状态
             maps:[],						//地图队列
             audio:[],						//音频资源
